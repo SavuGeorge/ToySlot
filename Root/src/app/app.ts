@@ -10,6 +10,7 @@ enum SymbolAnimationState {
 }
 export class SymbolHolder{
     private sprite : PIXI.Sprite;
+    private symbolIndex : number;
 
     // would have probably been better to use PIXI transforms, but the docs seemed a bit bare-bones, so I'm just handling positions myself. 
     private defaultX : number; private defaultY : number; // default position when idle on reels
@@ -18,14 +19,16 @@ export class SymbolHolder{
     private animationState : SymbolAnimationState = SymbolAnimationState.Idle;
     private velocity : number = 0;
     private maxVelocity : number = 100;
-    private acceleration : number = 3;
+    private acceleration : number = 4;
 
-    constructor(symbolSize : number){
+    constructor(symbolSize : number, index : number){
         this.sprite = new PIXI.Sprite();
         this.sprite.width = symbolSize;
         this.sprite.height = symbolSize;
         this.sprite.anchor.set(0.5, 0.5);
         GameApp.instance.app.stage.addChild(this.sprite);
+
+        this.symbolIndex = index;
     }
 
     public SetAnimationState(state : SymbolAnimationState) : void{
@@ -38,7 +41,7 @@ export class SymbolHolder{
 
             case SymbolAnimationState.Entry:
                 this.sprite.rotation = 0;
-                this.SetPosOffset(0, -1000);
+                this.SetPosOffset(0, -800);
                 this.velocity = 0;
 
                 break;
@@ -69,8 +72,9 @@ export class SymbolHolder{
                     this.velocity = this.maxVelocity;
                 }
                 let newOffset : number = this.offsetY + this.velocity * deltaTime;
-                if(newOffset < 0){  // Entry animation is finished
+                if(newOffset > 0){  // Entry animation is finished
                     this.SetAnimationState(SymbolAnimationState.Idle);
+                    GameApp.instance.SymbolSpinFinishedCallback(this.symbolIndex);
                 }   
                 else{
                     this.SetPosOffsetY(newOffset);
@@ -134,18 +138,17 @@ export class SlotArea{
         this.reelCount = reelNr;
         this.reelLength = reelLength;
         for(let i = 0; i < reelNr * reelLength; i++){
-            this.symbolHolders[i] = new SymbolHolder(symbolSize); 
+            this.symbolHolders[i] = new SymbolHolder(symbolSize, i); 
         }
     }
     
     // 10 11 12 13 14
     // 5  6  7  8  9
     // 0  1  2  3  4 
-    public SetSymbolSprites(symbolIds : number[]) : void{
+    public SetRandomSymbolSprites(symbolIds : number[]) : void{
         for(let i = 0; i < this.reelLength; i++){
             for(let j = 0; j < this.reelCount; j++){
-                //this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite(symbolIds[GameApp.instance.GetSymbolIndex(i,j)]);
-                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite((GameApp.instance.GetSymbolIndex(i,j)) % 8);
+                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite(symbolIds[GameApp.instance.GetSymbolIndex(i,j)]);
             }
         }
     }
@@ -188,6 +191,7 @@ export class GameApp {
 
     public rowStartDelay : number = 80;
     public symbolStartDelay : number = 30;    
+    public spinEntryDelay : number = 800;
 
 
 
@@ -208,9 +212,8 @@ export class GameApp {
     }
 
     private onAssetsLoaded() : void {
-        
         this.gameHolder = new SlotArea(this.reelLength, this.reelCount, this.symbolSize);                            // generating Sprite holders, grouped by reels
-        this.gameHolder.SetSymbolSprites(Utility.getRandomIntArray(this.symbolTypeCount, this.totalPositions));      // initing with a set of random symbols.
+        this.RandomizeSymbols();                                                                                     // initing with a set of random symbols.
         this.gameHolder.ArrangeSymbolDefaultPositions(this.gameOffsetX, this.gameOffsetY, this.symbolSize);          // setting default positions for all symbolHolders
         this.canSpin = true;
 
@@ -226,20 +229,40 @@ export class GameApp {
 
     private TrySpin() : void{
         if(GameApp.instance.canSpin){
-            for(let i = 0; i < this.reelLength; i++){
-                for(let j = 0; j < this.reelCount; j++){
-                    this.SetSymbolAnimState(i, j, SymbolAnimationState.Idle);
-                    setTimeout(this.SetSymbolAnimState, i * this.rowStartDelay + j * this.symbolStartDelay, i, j, SymbolAnimationState.Exit);
-                }
+            GameApp.instance.canSpin = false;
+            this.Spin();
+        }
+    }
+    private Spin() : void{
+        for(let i = 0; i < this.reelLength; i++){
+            for(let j = 0; j < this.reelCount; j++){
+                // If this was a real game we would need a separate waitingForResponse state before going into Entry. Just waiting a constant time instead here.
+                this.SetSymbolAnimState(i, j, SymbolAnimationState.Idle);
+                setTimeout(this.SetSymbolAnimState, i * this.rowStartDelay + j * this.symbolStartDelay, i, j, SymbolAnimationState.Exit);
+                
+                setTimeout(this.RandomizeSymbols, this.spinEntryDelay);
+                setTimeout(this.SetSymbolAnimState, this.spinEntryDelay + i * this.rowStartDelay + j * this.symbolStartDelay, i, j, SymbolAnimationState.Entry);
             }
         }
     }
-    private SetSymbolAnimState(i : number, j : number, state : SymbolAnimationState) : void{ // using this to use setTimeout for easy delays, not ideal
+
+     // using singleton access here to use setTimeout for easy delays, could definitely be done better.
+    private SetSymbolAnimState(i : number, j : number, state : SymbolAnimationState) : void{
         GameApp.instance.gameHolder.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetAnimationState(state);
+    }
+    private RandomizeSymbols() : void{
+        GameApp.instance.gameHolder.SetRandomSymbolSprites(Utility.getRandomIntArray(GameApp.instance.symbolTypeCount, GameApp.instance.totalPositions));
     }
 
     private Update(this: any, delta: number) : void {
         GameApp.instance.gameHolder.UpdateSymbols(delta);
+    }
+
+    public SymbolSpinFinishedCallback(symbolIndex : number) : void{ 
+        // when the last symbol finishes spinning we enabled spins again
+        if(symbolIndex === this.totalPositions-1){
+            this.canSpin = true;
+        }
     }
 
     public GetSymbolIndex(i : number, j : number) : number{
