@@ -18,7 +18,7 @@ export class SymbolHolder{
     private animationState : SymbolAnimationState = SymbolAnimationState.Idle;
     private velocity : number = 0;
     private maxVelocity : number = 100;
-    private acceleration : number = 1;
+    private acceleration : number = 3;
 
     constructor(symbolSize : number){
         this.sprite = new PIXI.Sprite();
@@ -125,54 +125,43 @@ export class SymbolHolder{
 
 }
 
-export class Reel{
-    public readonly reelLength : number;
-    public holders : SymbolHolder[] = [];
-
-    constructor(len : number, symbolSize : number){
-        this.reelLength = len;
-        for(let i = 0; i < len; i++){
-            this.holders[i] = new SymbolHolder(symbolSize);
-        }
-    }
-}
-
 export class SlotArea{
     private readonly reelCount : number;
     private readonly reelLength : number;
-    public reels : Reel[] = [];
+    public symbolHolders : SymbolHolder[] = [];
 
     constructor(reelLength : number, reelNr: number, symbolSize : number){
         this.reelCount = reelNr;
         this.reelLength = reelLength;
-        for(let i = 0; i < reelNr; i++){
-            this.reels[i] = new Reel(reelLength, symbolSize); 
+        for(let i = 0; i < reelNr * reelLength; i++){
+            this.symbolHolders[i] = new SymbolHolder(symbolSize); 
         }
     }
     
-    // 0 3 6 9  12 
-    // 1 4 7 10 13
-    // 2 5 8 11 14
+    // 10 11 12 13 14
+    // 5  6  7  8  9
+    // 0  1  2  3  4 
     public SetSymbolSprites(symbolIds : number[]) : void{
-        for(let i = 0; i < this.reelCount; i++){
-            for(let j = 0; j < this.reelLength; j++){
-                this.reels[i].holders[j].SetSprite(symbolIds[i * this.reelLength + j]);
+        for(let i = 0; i < this.reelLength; i++){
+            for(let j = 0; j < this.reelCount; j++){
+                //this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite(symbolIds[GameApp.instance.GetSymbolIndex(i,j)]);
+                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite((GameApp.instance.GetSymbolIndex(i,j)) % 8);
             }
         }
     }
 
     public ArrangeSymbolDefaultPositions(gameOffsetX : number, gameOffsetY : number, symbolSize : number) : void{
-        for(let i = 0; i < this.reelCount; i++){
-            for(let j = 0; j < this.reelLength; j++){
-                this.reels[i].holders[j].SetDefaultPosition(gameOffsetX + symbolSize * i, gameOffsetY + symbolSize * j);
+        for(let i = 0; i < this.reelLength; i++){
+            for(let j = 0; j < this.reelCount; j++){
+                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetDefaultPosition(gameOffsetX + symbolSize * j, gameOffsetY + symbolSize * (this.reelLength - i));
             }
         }
     }
 
     public UpdateSymbols(deltaTime : number): void{
-        for(let i = 0; i < this.reelCount; i++){
-            for(let j = 0; j < this.reelLength; j++){
-                this.reels[i].holders[j].UpdateSymbolHolder(deltaTime);
+        for(let i = 0; i < this.reelLength; i++){
+            for(let j = 0; j < this.reelCount; j++){
+                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].UpdateSymbolHolder(deltaTime);
             }
         }
     }
@@ -190,11 +179,14 @@ export class GameApp {
     public reelLength : number = 3;
     public reelCount : number = 5;
     public totalPositions : number = 0;
+    public gameOffsetX : number = 200;
+    public gameOffsetY : number = 50;
 
     public symbolSize : number = 200;
     public symbolTypeCount : number = 8;
 
-    public reelStartDelay : number = 100;
+
+    public rowStartDelay : number = 80;
     public symbolStartDelay : number = 30;    
 
 
@@ -219,7 +211,7 @@ export class GameApp {
         
         this.gameHolder = new SlotArea(this.reelLength, this.reelCount, this.symbolSize);                            // generating Sprite holders, grouped by reels
         this.gameHolder.SetSymbolSprites(Utility.getRandomIntArray(this.symbolTypeCount, this.totalPositions));      // initing with a set of random symbols.
-        this.gameHolder.ArrangeSymbolDefaultPositions(200, 200, this.symbolSize);                                    // setting default positions for all symbolHolders
+        this.gameHolder.ArrangeSymbolDefaultPositions(this.gameOffsetX, this.gameOffsetY, this.symbolSize);          // setting default positions for all symbolHolders
         this.canSpin = true;
 
         // Adding update method 
@@ -234,20 +226,24 @@ export class GameApp {
 
     private TrySpin() : void{
         if(GameApp.instance.canSpin){
-            for(let i = 0; i < this.reelCount; i++){
-                for(let j = 0; j < this.reelLength; j++){
+            for(let i = 0; i < this.reelLength; i++){
+                for(let j = 0; j < this.reelCount; j++){
                     this.SetSymbolAnimState(i, j, SymbolAnimationState.Idle);
-                    setTimeout(this.SetSymbolAnimState, i * this.reelStartDelay + (this.reelLength - j) * this.symbolStartDelay, i, j, SymbolAnimationState.Exit);
+                    setTimeout(this.SetSymbolAnimState, i * this.rowStartDelay + j * this.symbolStartDelay, i, j, SymbolAnimationState.Exit);
                 }
             }
         }
     }
     private SetSymbolAnimState(i : number, j : number, state : SymbolAnimationState) : void{ // using this to use setTimeout for easy delays, not ideal
-        GameApp.instance.gameHolder.reels[i].holders[j].SetAnimationState(state);
+        GameApp.instance.gameHolder.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetAnimationState(state);
     }
 
     private Update(this: any, delta: number) : void {
         GameApp.instance.gameHolder.UpdateSymbols(delta);
+    }
+
+    public GetSymbolIndex(i : number, j : number) : number{
+        return i * this.reelCount + j;
     }
 
 }
