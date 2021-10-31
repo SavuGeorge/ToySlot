@@ -40,25 +40,20 @@ export class SymbolHolder{
         switch(this.animationState){
             case SymbolAnimationState.Idle:
                 this.SetDefaultValues();
-
                 break;
 
             case SymbolAnimationState.Entry:
                 this.sprite.rotation = 0;
                 this.SetPosOffset(0, -800);
                 this.velocity = 0;
-
                 break;
 
             case SymbolAnimationState.Exit:
                 this.SetDefaultValues();
-
-
                 break;
 
             case SymbolAnimationState.Winning:
                 this.SetDefaultValues();
-                
                 break;  
         }
     }
@@ -94,7 +89,7 @@ export class SymbolHolder{
                 break;
 
             case SymbolAnimationState.Winning: // Spin for the win! :D
-                this.sprite.rotation += deltaTime * 10;
+                this.sprite.rotation += deltaTime * 0.1;
                 break;  
         }
     }
@@ -147,11 +142,9 @@ export class SlotArea{
     // 10 11 12 13 14
     // 5  6  7  8  9
     // 0  1  2  3  4 
-    public SetRandomSymbolSprites(symbolIds : number[]) : void{
-        for(let i = 0; i < this.reelLength; i++){
-            for(let j = 0; j < this.reelCount; j++){
-                this.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetSprite(symbolIds[GameApp.instance.GetSymbolIndex(i,j)]);
-            }
+    public SetSymbolSprites(symbolIds : number[]) : void{
+        for(let i = 0; i < this.symbolHolders.length; i++){
+            this.symbolHolders[i].SetSprite(symbolIds[i]);
         }
     }
 
@@ -201,7 +194,8 @@ export class GameApp {
     public symbolStartDelay : number = 40;    
     public spinEntryDelay : number = 800;
 
-    public canSpin : boolean = false;
+    private canSpin : boolean = false;
+    private symbolIdList : number[] = [];
 
     constructor(parent: HTMLElement, width: number, height: number, symbolSize : number) {
 
@@ -238,7 +232,7 @@ export class GameApp {
             
         this.peanutButterJellyTime = new PIXI.AnimatedSprite(banana['idle'].map(path => PIXI.Texture.from(path)));
         this.peanutButterJellyTime.x = 1400;
-        this.peanutButterJellyTime.y = 300;
+        this.peanutButterJellyTime.y = 50000;
         this.peanutButterJellyTime.anchor.set(0.5, 0.5);
         this.peanutButterJellyTime.animationSpeed = 0.1;
         this.peanutButterJellyTime.play();
@@ -256,6 +250,7 @@ export class GameApp {
     }
     private Spin() : void{
         sfx['spin'].play();
+        this.peanutButterJellyTime.y = 50000;
 
         for(let i = 0; i < this.reelLength; i++){
             for(let j = 0; j < this.reelCount; j++){
@@ -272,14 +267,13 @@ export class GameApp {
         GameApp.instance.gameHolder.UpdateSymbols(delta);
     }
 
-
-
      // using singleton access here to use setTimeout for easy delays, could definitely be done better.
     private SetSymbolAnimState(i : number, j : number, state : SymbolAnimationState) : void{
         GameApp.instance.gameHolder.symbolHolders[GameApp.instance.GetSymbolIndex(i,j)].SetAnimationState(state);
     }
     private RandomizeSymbols() : void{
-        GameApp.instance.gameHolder.SetRandomSymbolSprites(Utility.getRandomIntArray(GameApp.instance.symbolTypeCount, GameApp.instance.totalPositions));
+        GameApp.instance.symbolIdList = Utility.getRandomIntArray(GameApp.instance.symbolTypeCount, GameApp.instance.totalPositions);
+        GameApp.instance.gameHolder.SetSymbolSprites(GameApp.instance.symbolIdList);
     }
     public SetCanSpin(status : boolean) : void{
         this.canSpin = status;
@@ -295,7 +289,7 @@ export class GameApp {
     public SymbolSpinFinishedCallback(symbolIndex : number) : void{ 
         // when the last symbol finishes spinning we enabled spins again
         if(symbolIndex === this.totalPositions-1){
-            this.SetCanSpin(true);
+            this.SpinFinished();
         }
         else if(symbolIndex === 0){  // Very hard coded way of playing sounds here, could be done a lot better
             sfx['s1'].play();
@@ -313,7 +307,36 @@ export class GameApp {
             sfx['s5'].play();
         }
     }
-
+    private SpinFinished() : void{
+        this.SetCanSpin(true);
+        this.ComputeToyWinLines();
+    }
+    private ComputeToyWinLines() : void{   // Hard coded extra for fun. 2 or more consecutive symbols on a row are a win.
+        let lineResult1 = this.ComputeToyWinLine(0, 5); 
+        let lineResult2 = this.ComputeToyWinLine(5, 10);
+        let lineResult3 = this.ComputeToyWinLine(10, 15);
+        if(lineResult1 || lineResult2 || lineResult3) {  // if at least one win we do some cheering!
+            sfx['yay'].play();
+            this.peanutButterJellyTime.y = 300;
+        }
+    }
+    private ComputeToyWinLine(rowStart : number, rowEnd : number) : boolean{
+        let firstSymbol : number = this.symbolIdList[rowStart];
+        let foundWin : boolean = false;
+        for(let i = rowStart+1; i < rowEnd; i++){
+            if(this.symbolIdList[i] === firstSymbol){
+                foundWin = true;
+                this.gameHolder.symbolHolders[i].SetAnimationState(SymbolAnimationState.Winning);
+            }
+            else{ // line broke :(
+                break;
+            }
+        }
+        if(foundWin){
+            this.gameHolder.symbolHolders[rowStart].SetAnimationState(SymbolAnimationState.Winning);
+        }
+        return foundWin;
+    }
     
     public GetSymbolIndex(i : number, j : number) : number{
         return i * this.reelCount + j;

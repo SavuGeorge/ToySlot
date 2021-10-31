@@ -22,6 +22,7 @@ import stop2 from './sounds/Reel_Stop_2.mp3';
 import stop3 from './sounds/Reel_Stop_3.mp3';
 import stop4 from './sounds/Reel_Stop_4.mp3';
 import stop5 from './sounds/Reel_Stop_5.mp3';
+import yay from './sounds/yay.mp3';
 
 export const button = {
     'disabled' : buttonDisabled,
@@ -52,4 +53,5 @@ export const sfx = {
     's3' : new Howl({src : stop3}),
     's4' : new Howl({src : stop4}),
     's5' : new Howl({src : stop5}),
+    'yay' : new Howl({src : yay}),
 }
