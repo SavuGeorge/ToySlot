@@ -12,6 +12,7 @@
   "author": "Llorenç Pujol Ferriol",
   "license": "MIT",
   "dependencies": {
+    "howler": "^2.2.3",
     "pixi.js": "~5.3.3"
   },
   "devDependencies": {

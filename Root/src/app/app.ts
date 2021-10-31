@@ -1,7 +1,9 @@
 import * as PIXI from 'pixi.js';
+import {Howl, Howler} from 'howler';
 import Utility from './util';
 import SpinButton from './spinButton';
 import { symbols } from '../assets/loader';
+import { sfx } from '../assets/loader';
 
 enum SymbolAnimationState {
     Idle,
@@ -192,8 +194,8 @@ export class GameApp {
     public symbolTypeCount : number = 8;
 
 
-    public rowStartDelay : number = 80;
-    public symbolStartDelay : number = 30;    
+    public rowStartDelay : number = 150;
+    public symbolStartDelay : number = 40;    
     public spinEntryDelay : number = 800;
 
     public canSpin : boolean = false;
@@ -240,6 +242,8 @@ export class GameApp {
         }
     }
     private Spin() : void{
+        sfx['spin'].play();
+
         for(let i = 0; i < this.reelLength; i++){
             for(let j = 0; j < this.reelCount; j++){
                 // If this was a real game we would need a separate waitingForResponse state before going into Entry. Just waiting a constant time instead here.
@@ -279,6 +283,21 @@ export class GameApp {
         // when the last symbol finishes spinning we enabled spins again
         if(symbolIndex === this.totalPositions-1){
             this.SetCanSpin(true);
+        }
+        else if(symbolIndex === 0){  // Very hard coded way of playing sounds here, could be done a lot better
+            sfx['s1'].play();
+        }
+        else if(symbolIndex === 1){
+            sfx['s2'].play();
+        }
+        else if(symbolIndex === 2){
+            sfx['s3'].play();
+        }
+        else if(symbolIndex === 3){
+            sfx['s4'].play();
+        }
+        else if(symbolIndex === 4){
+            sfx['s5'].play();
         }
     }
 

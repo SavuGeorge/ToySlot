@@ -12,6 +12,17 @@ import buttonHover from './images/ui/btn_spin_hover.png';
 import buttonNormal from './images/ui/btn_spin_normal.png';
 import buttonPressed from './images/ui/btn_spin_pressed.png';
 
+
+
+import {Howl, Howler} from 'howler';
+
+import spinSFX from './sounds/Start_Button.mp3';
+import stop1 from './sounds/Reel_Stop_1.mp3';
+import stop2 from './sounds/Reel_Stop_2.mp3';
+import stop3 from './sounds/Reel_Stop_3.mp3';
+import stop4 from './sounds/Reel_Stop_4.mp3';
+import stop5 from './sounds/Reel_Stop_5.mp3';
+
 export const button = {
     'disabled' : buttonDisabled,
     'hover' : buttonHover,
@@ -29,3 +40,12 @@ export const symbols = {
     6 : Symbol07,
     7 : Symbol08,
 };
+
+export const sfx = {
+    'spin' : new Howl({src : spinSFX}),
+    's1' : new Howl({src : stop1}),
+    's2' : new Howl({src : stop2}),
+    's3' : new Howl({src : stop3}),
+    's4' : new Howl({src : stop4}),
+    's5' : new Howl({src : stop5}),
+}
