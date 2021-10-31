@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import Utility from './util';
+import SpinButton from './spinButton';
 import { symbols } from '../assets/loader';
 
 enum SymbolAnimationState {
@@ -125,8 +126,6 @@ export class SymbolHolder{
         this.SetPosOffset(0, 0);
     }
 
-    
-
 }
 
 export class SlotArea{
@@ -173,11 +172,15 @@ export class SlotArea{
 export class GameApp {
 
     public static instance: GameApp;
-    private gameHolder : SlotArea = null;
-    public canSpin : boolean = false;
 
-    // Some random game configuration variables. Could be better placed
     public app: PIXI.Application; 
+
+    private gameHolder : SlotArea = null;
+    private button : SpinButton = null;
+    private buttonX : number = 1250;
+    private buttonY : number = 725;
+    private buttonWidth : number = 200;
+    private buttonHeight : number = 200;
 
     public reelLength : number = 3;
     public reelCount : number = 5;
@@ -193,7 +196,7 @@ export class GameApp {
     public symbolStartDelay : number = 30;    
     public spinEntryDelay : number = 800;
 
-
+    public canSpin : boolean = false;
 
     constructor(parent: HTMLElement, width: number, height: number, symbolSize : number) {
 
@@ -204,18 +207,19 @@ export class GameApp {
 
         this.totalPositions = this.reelLength * this.reelCount;
 
+        this.button = new SpinButton(this.app, this.buttonX, this.buttonY, this.buttonWidth, this.buttonHeight);
+
         // init Pixi loader
         let loader = new PIXI.Loader();
 
         // Load assets
-        loader.load(this.onAssetsLoaded.bind(this));
+        loader.load(this.OnAssetsLoaded.bind(this));
     }
-
-    private onAssetsLoaded() : void {
+    private OnAssetsLoaded() : void {
         this.gameHolder = new SlotArea(this.reelLength, this.reelCount, this.symbolSize);                            // generating Sprite holders, grouped by reels
         this.RandomizeSymbols();                                                                                     // initing with a set of random symbols.
         this.gameHolder.ArrangeSymbolDefaultPositions(this.gameOffsetX, this.gameOffsetY, this.symbolSize);          // setting default positions for all symbolHolders
-        this.canSpin = true;
+        this.SetCanSpin(true);
 
         // Adding update method 
         this.app.ticker.add(this.Update);
@@ -227,9 +231,11 @@ export class GameApp {
             }});
     }
 
-    private TrySpin() : void{
+
+
+    public TrySpin() : void{
         if(GameApp.instance.canSpin){
-            GameApp.instance.canSpin = false;
+            GameApp.instance.SetCanSpin(false);
             this.Spin();
         }
     }
@@ -245,6 +251,11 @@ export class GameApp {
             }
         }
     }
+    private Update(this: any, delta: number) : void {
+        GameApp.instance.gameHolder.UpdateSymbols(delta);
+    }
+
+
 
      // using singleton access here to use setTimeout for easy delays, could definitely be done better.
     private SetSymbolAnimState(i : number, j : number, state : SymbolAnimationState) : void{
@@ -253,18 +264,25 @@ export class GameApp {
     private RandomizeSymbols() : void{
         GameApp.instance.gameHolder.SetRandomSymbolSprites(Utility.getRandomIntArray(GameApp.instance.symbolTypeCount, GameApp.instance.totalPositions));
     }
-
-    private Update(this: any, delta: number) : void {
-        GameApp.instance.gameHolder.UpdateSymbols(delta);
+    public SetCanSpin(status : boolean) : void{
+        this.canSpin = status;
+        if(this.canSpin){
+            this.button.EnableButton();
+        }
+        else{
+            this.button.DisableButton();
+        }
     }
+
 
     public SymbolSpinFinishedCallback(symbolIndex : number) : void{ 
         // when the last symbol finishes spinning we enabled spins again
         if(symbolIndex === this.totalPositions-1){
-            this.canSpin = true;
+            this.SetCanSpin(true);
         }
     }
 
+    
     public GetSymbolIndex(i : number, j : number) : number{
         return i * this.reelCount + j;
     }
