@@ -12,7 +12,7 @@ import buttonHover from './images/ui/btn_spin_hover.png';
 import buttonNormal from './images/ui/btn_spin_normal.png';
 import buttonPressed from './images/ui/btn_spin_pressed.png';
 
-
+import bananaFrames from './images/PeanutButterJellyTime/*.png'
 
 import {Howl, Howler} from 'howler';
 
@@ -40,6 +40,10 @@ export const symbols = {
     6 : Symbol07,
     7 : Symbol08,
 };
+
+export const banana = {
+    'idle' : Object.values(bananaFrames),
+}
 
 export const sfx = {
     'spin' : new Howl({src : spinSFX}),

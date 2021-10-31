@@ -3,6 +3,7 @@ import {Howl, Howler} from 'howler';
 import Utility from './util';
 import SpinButton from './spinButton';
 import { symbols } from '../assets/loader';
+import { banana } from '../assets/loader';
 import { sfx } from '../assets/loader';
 
 enum SymbolAnimationState {
@@ -184,6 +185,8 @@ export class GameApp {
     private buttonWidth : number = 200;
     private buttonHeight : number = 200;
 
+    private peanutButterJellyTime : PIXI.AnimatedSprite;
+
     public reelLength : number = 3;
     public reelCount : number = 5;
     public totalPositions : number = 0;
@@ -204,7 +207,7 @@ export class GameApp {
 
         GameApp.instance = this;
 
-        GameApp.instance.app = new PIXI.Application({width, height, backgroundColor : 0x000000});
+        GameApp.instance.app = new PIXI.Application({width, height, backgroundColor : 0xFCFCFC});
         parent.replaceChild(GameApp.instance.app.view, parent.lastElementChild); // Hack for parcel HMR
 
         this.totalPositions = this.reelLength * this.reelCount;
@@ -231,6 +234,16 @@ export class GameApp {
             if (event.code === 'Space') {
                 this.TrySpin();
             }});
+
+            
+        this.peanutButterJellyTime = new PIXI.AnimatedSprite(banana['idle'].map(path => PIXI.Texture.from(path)));
+        this.peanutButterJellyTime.x = 1400;
+        this.peanutButterJellyTime.y = 300;
+        this.peanutButterJellyTime.anchor.set(0.5, 0.5);
+        this.peanutButterJellyTime.animationSpeed = 0.1;
+        this.peanutButterJellyTime.play();
+
+        this.app.stage.addChild(this.peanutButterJellyTime);
     }
 
 
